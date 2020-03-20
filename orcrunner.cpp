@@ -436,11 +436,12 @@ size_t interpretAndWrite(std::string firstLineOfOper, size_t indexInMem, std::un
 // run the operation that you find, change MI to next operation
 void OrcRunner::execute()  {
     ofstream ofs_full;
-    ofs_full.open("out_full.exe.txt");
-    ofs_full << "ererer" << endl;
     ofstream ofs_limited;
     ofstream printer;
-    std::string desired_filename_full = "out_full.exe.txt";
+
+    ofs_full.open("out_full.exe.txt");
+
+    string desired_filename_full = "out_full.exe.txt";
     std::string desired_filename_lim = "out_limited_1.txt";
     desired_filename_full = "output1.txt";
     ofs_limited.open(desired_filename_lim);

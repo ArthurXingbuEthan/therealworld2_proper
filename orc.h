@@ -14,6 +14,7 @@ enum FileType : Byte7 { EXE, OBJ };
 enum SymbolType : Byte7 { EXTERN, FUNC };
 enum SegmentType : Byte7 { PROGBITS, NOTE };
 
+
 struct Permissions {
     Byte7 byte7;
     Bool executable() { return (Bool)((byte7>>4)&1); }
