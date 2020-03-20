@@ -8,6 +8,8 @@
 typedef unordered_map<size_t,memory_value>::const_iterator map_iter;
 
 using namespace std;
+using std::cout;
+using std::endl;
 
 struct instruction{
     public:
@@ -26,6 +28,11 @@ struct instruction{
         out += "\nTYPE: " + to_string(this->type) + ", opcode:" + this->opcode;
         out += this->type == 1 ? ("\nsrc: " + this->src + ", dest:" + this->dest + "\n") : "";
         out += this->type == 2 ? ("\nval: " + this->val + "\n") : "";
+        if(this->type == 1 && this->name == "ORR"){
+            out+="char: ";
+            out+=(char)(stoi(this->src.substr(0,7), NULL, 2));
+            out+= "\n";
+        }
         return out;
 
     }
@@ -126,11 +133,23 @@ int executeCal(instruction i){
     stack.push_back(registers[9] + i.value.length());
     //decrements pc by 4;
     registers[10] -= 4;
+    int jumpBy = stoi(i.val.substr(0,7), NULL, 2);
 
-    cout << "in xecutCal, jumping " << stoi(i.val.substr(0,7), NULL, 2) << " lines\n";
-    return stoi(i.val.substr(0,7), NULL, 2);
+    //this might solve out problem is Colin made a mistake and 0101000 should be 0010100 instead
+    
+    //jumpBy = jumpBy >> 1;
+
+    //decrement the size of instruction itself
+    
+    //if(i.firstcode == "101") jumpBy -= 5; // -5 because if firstCode is 101, then instruction is a 35-bit long string, therefore subtract 5
+
+    jumpBy = 12;
+
+    cout << "in executCal, jumping " << jumpBy<< " lines\n";
+    return jumpBy;
 }
 void executePsh(instruction i){
+
 
 }
 void executePop(instruction i){
@@ -145,10 +164,12 @@ void executeOut(instruction i){
         //cout << stoi(i.val, NULL, 2);
         //cout << registers[0];
         //cout << (char)registers[stoi(i.val, NULL, 2)] << endl;
+        cout << "adding: " << (char)registers[stoi(i.val, NULL, 2)] << " to std_out";
         our_stdout += (char)registers[stoi(i.val, NULL, 2)];
     }
     else if(i.firstcode == "101"){
         //might be wrong, i dont really care
+        cout << "adding: " << (char)stoi(i.val, NULL, 2) << " to std_out";
         our_stdout += (char)stoi(i.val, NULL, 2);
     }
     else{
@@ -455,6 +476,7 @@ void OrcRunner::execute()  {
 
         size_t nextLoc = interpretAndWrite(bitset<7>(MEMORY.at(currentIndex).value).to_string(), currentIndex, MEMORY, printer);
         cout << "just executed: " << currentIndex << endl;
+        cout << "next instruction is at: " << nextLoc << endl;
         printRegisters();
         if(nextLoc == currentIndex){
             cout << "interpreter returned the same location, check log" << endl;
