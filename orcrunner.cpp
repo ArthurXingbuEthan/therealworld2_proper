@@ -42,6 +42,9 @@ int* registers;
 vector<int> stack;
 size_t currentIndex;
 std::string our_stdout;
+bool lookingForJump;
+std::string targetStringJump;
+ofstream printer;
 
 void printRegisters(){
     cout << "registers:\n";
@@ -133,7 +136,9 @@ int executeCal(instruction i){
     stack.push_back(registers[9] + i.value.length());
     //decrements pc by 4;
     registers[10] -= 4;
-    int jumpBy = stoi(i.val.substr(0,7), NULL, 2);
+
+    lookingForJump = 1;
+    targetStringJump = i.val.substr(0,7);
 
     //this might solve out problem is Colin made a mistake and 0101000 should be 0010100 instead
     
@@ -143,10 +148,7 @@ int executeCal(instruction i){
     
     //if(i.firstcode == "101") jumpBy -= 5; // -5 because if firstCode is 101, then instruction is a 35-bit long string, therefore subtract 5
 
-    jumpBy = 12;
-
-    cout << "in executCal, jumping " << jumpBy<< " lines\n";
-    return jumpBy;
+    return 0;
 }
 void executePsh(instruction i){
 
@@ -220,7 +222,10 @@ ostream & operator << (ostream &out, const memory_value & m) {
         return out;
 }
 
-OrcRunner::OrcRunner() { }
+OrcRunner::OrcRunner() {
+    targetStringJump = "";
+    lookingForJump = 0;
+ }
 
 OrcRunner::OrcRunner(const Orc & orc) {
     OrcRunner in = OrcLoader().getOrcRunner(orc);
@@ -413,7 +418,7 @@ size_t interpretAndWrite(std::string firstLineOfOper, size_t indexInMem, std::un
     else if(instr.name == "JMP") executeJmp(instr);
     else if(instr.name == "JLT") executeJlt(instr);
     else if(instr.name == "JEQ") executeJeq(instr);
-    else if(instr.name == "CAL") returnValue += executeCal(instr);
+    else if(instr.name == "CAL") executeCal(instr);
     else if(instr.name == "PSH") executePsh(instr);
     else if(instr.name == "POP") executePop(instr);
     else if(instr.name == "NOT") executeNot(instr);
@@ -422,7 +427,7 @@ size_t interpretAndWrite(std::string firstLineOfOper, size_t indexInMem, std::un
     else if(instr.name == "AMP") executeAmp(instr);
     else if(instr.name == "ALT") executeAlt(instr);
     else if(instr.name == "AEQ") executeAeq(instr);
-    else if(instr.name == "AAL") returnValue += executeAal(instr);
+    else if(instr.name == "AAL") executeAal(instr);
     else if(instr.name == "RET") executeRet(instr);
     else if(instr.name == "NOP") executeNop(instr);
     else{
@@ -437,7 +442,6 @@ size_t interpretAndWrite(std::string firstLineOfOper, size_t indexInMem, std::un
 void OrcRunner::execute()  {
     ofstream ofs_full;
     ofstream ofs_limited;
-    ofstream printer;
 
     ofs_full.open("out_full.exe.txt");
 
@@ -475,15 +479,36 @@ void OrcRunner::execute()  {
 
     while(MEMORY.find(currentIndex) != MEMORY.end()){
 
-        size_t nextLoc = interpretAndWrite(bitset<7>(MEMORY.at(currentIndex).value).to_string(), currentIndex, MEMORY, printer);
-        cout << "just executed: " << currentIndex << endl;
-        cout << "next instruction is at: " << nextLoc << endl;
-        printRegisters();
-        if(nextLoc == currentIndex){
-            cout << "interpreter returned the same location, check log" << endl;
-            break;
+
+        //if we are currently jumping, see if the string matches, if not, continue.
+        if(lookingForJump){
+            cout << "looking for: " << targetStringJump << endl;
+            cout << "current string: " << bitset<7>(MEMORY.at(currentIndex).value).to_string() << endl;
+
+            printer << "current string: " << bitset<7>(MEMORY.at(currentIndex).value).to_string() << endl;
+            
+            if(targetStringJump != bitset<7>(MEMORY.at(currentIndex).value).to_string()){
+                currentIndex++;
+            }
+            else{
+                lookingForJump = 0;
+                targetStringJump = "";
+            }
         }
-        else currentIndex = nextLoc;
+
+        //if we are not currently jumping (looking for a string to match, then execute instruction like normally)
+        if(!lookingForJump){
+            size_t nextLoc = interpretAndWrite(bitset<7>(MEMORY.at(currentIndex).value).to_string(), currentIndex, MEMORY, printer);
+            cout << "just executed: " << currentIndex << endl;
+            cout << "next instruction is at: " << nextLoc << endl;
+            printRegisters();
+            if(nextLoc == currentIndex){
+                cout << "interpreter returned the same location, check log" << endl;
+                break;
+            }
+            else currentIndex = nextLoc;
+        }
+
     }
 
     cout << "\nThis is our_stdout: " << our_stdout << endl << endl;
